@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width,
+                   initial-scale=1.0,
+                   maximum-scale=1.0,
+                   user-scalable=no">
+
+    <title>FluidPend Sensor Test</title>
+
+    <style>
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #111;
+            font-family: Arial, sans-serif;
+            color: white;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+            width: 90%;
+        }
+
+        button {
+            font-size: 18px;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            margin: 4px;
+        }
+
+        #status {
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        #values {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="controls">
+    <button id="motionButton">
+        Enable Motion
+    </button>
+
+    <button id="resetButton">
+        Reset Particles
+    </button>
+
+    <div id="status">
+        Motion sensor not enabled
+    </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="values">
+    Gravity X: 0<br>
+    Gravity Y: 0
+</div>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const motionButton =
+    document.getElementById("motionButton");
+
+const resetButton =
+    document.getElementById("resetButton");
+
+const statusText =
+    document.getElementById("status");
+
+const valuesText =
+    document.getElementById("values");
+
+
+/* ---------------------------------
+   Canvas size
+---------------------------------- */
+
+function resizeCanvas() {
+
+    canvas.width =
+        window.innerWidth *
+        window.devicePixelRatio;
+
+    canvas.height =
+        window.innerHeight *
+        window.devicePixelRatio;
+
+    ctx.setTransform(
+        window.devicePixelRatio,
+        0,
+        0,
+        window.devicePixelRatio,
+        0,
+        0
+    );
+}
+
+resizeCanvas();
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+
+/* ---------------------------------
+   Gravity
+---------------------------------- */
+
+let gravityX = 0;
+let gravityY = 180;
+
+
+/* ---------------------------------
+   Particle settings
+---------------------------------- */
+
+const particles = [];
+
+const particleCount = 90;
+
+const particleRadius = 5;
+
+
+function createParticles() {
+
+    particles.length = 0;
+
+    const cx =
+        window.innerWidth / 2;
+
+    const cy =
+        window.innerHeight / 2;
+
+    for (
+        let i = 0;
+        i < particleCount;
+        i++
+    ) {
+
+        particles.push({
+
+            x:
+                cx +
+                (Math.random() - 0.5) *
+                120,
+
+            y:
+                cy +
+                80 +
+                Math.random() *
+                120,
+
+            vx: 0,
+
+            vy: 0
+
+        });
+    }
+}
+
+
+createParticles();
+
+
+/* ---------------------------------
+   iPhone orientation handling
+---------------------------------- */
+
+function handleOrientation(event) {
+
+    /*
+       beta:
+       front/back tilt
+
+       gamma:
+       left/right tilt
+    */
+
+    let beta =
+        event.beta || 0;
+
+    let gamma =
+        event.gamma || 0;
+
+
+    /*
+       Limit angles so extreme
+       rotations do not cause
+       ridiculous acceleration.
+    */
+
+    beta =
+        Math.max(
+            -90,
+            Math.min(90, beta)
+        );
+
+    gamma =
+        Math.max(
+            -90,
+            Math.min(90, gamma)
+        );
+
+
+    const betaRad =
+        beta *
+        Math.PI /
+        180;
+
+    const gammaRad =
+        gamma *
+        Math.PI /
+        180;
+
+
+    const gravityStrength =
+        220;
+
+
+    /*
+       Convert phone orientation
+       into 2D gravity.
+    */
+
+    gravityX =
+        Math.sin(gammaRad) *
+        gravityStrength;
+
+    gravityY =
+        Math.sin(betaRad) *
+        gravityStrength;
+
+
+    valuesText.innerHTML =
+        "Beta: " +
+        beta.toFixed(1) +
+        "°<br>" +
+
+        "Gamma: " +
+        gamma.toFixed(1) +
+        "°<br>" +
+
+        "Gravity X: " +
+        gravityX.toFixed(1) +
+        "<br>" +
+
+        "Gravity Y: " +
+        gravityY.toFixed(1);
+}
+
+
+/* ---------------------------------
+   Ask iPhone for permission
+---------------------------------- */
+
+async function enableMotion() {
+
+    try {
+
+        if (
+            typeof DeviceOrientationEvent !==
+            "undefined" &&
+            typeof DeviceOrientationEvent
+                .requestPermission ===
+            "function"
+        ) {
+
+            const permission =
+                await DeviceOrientationEvent
+                    .requestPermission();
+
+
+            if (
+                permission ===
+                "granted"
+            ) {
+
+                window.addEventListener(
+                    "deviceorientation",
+                    handleOrientation
+                );
+
+                statusText.innerText =
+                    "Motion enabled";
+
+                motionButton.style.display =
+                    "none";
+
+            }
+
+            else {
+
+                statusText.innerText =
+                    "Motion permission denied";
+            }
+
+        }
+
+        else {
+
+            /*
+              Android and some other
+              browsers may not require
+              the explicit permission API.
+            */
+
+            window.addEventListener(
+                "deviceorientation",
+                handleOrientation
+            );
+
+            statusText.innerText =
+                "Motion enabled";
+
+            motionButton.style.display =
+                "none";
+        }
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        statusText.innerText =
+            "Motion sensor error";
+    }
+}
+
+
+motionButton.addEventListener(
+    "click",
+    enableMotion
+);
+
+
+resetButton.addEventListener(
+    "click",
+    createParticles
+);
+
+
+/* ---------------------------------
+   Desktop keyboard controls
+---------------------------------- */
+
+window.addEventListener(
+    "keydown",
+    function(event) {
+
+        const g = 220;
+
+        if (
+            event.key ===
+            "ArrowLeft"
+        ) {
+
+            gravityX = -g;
+            gravityY = 0;
+        }
+
+        if (
+            event.key ===
+            "ArrowRight"
+        ) {
+
+            gravityX = g;
+            gravityY = 0;
+        }
+
+        if (
+            event.key ===
+            "ArrowUp"
+        ) {
+
+            gravityX = 0;
+            gravityY = -g;
+        }
+
+        if (
+            event.key ===
+            "ArrowDown"
+        ) {
+
+            gravityX = 0;
+            gravityY = g;
+        }
+    }
+);
+
+
+/* ---------------------------------
+   Particle physics
+---------------------------------- */
+
+function updateParticles(dt) {
+
+    const width =
+        window.innerWidth;
+
+    const height =
+        window.innerHeight;
+
+
+    /*
+       Circular pendant boundary
+    */
+
+    const cx =
+        width / 2;
+
+    const cy =
+        height / 2;
+
+    const containerRadius =
+        Math.min(
+            width,
+            height
+        ) *
+        0.38;
+
+
+    for (
+        const p of particles
+    ) {
+
+        /*
+           Gravity changes velocity
+        */
+
+        p.vx +=
+            gravityX * dt;
+
+        p.vy +=
+            gravityY * dt;
+
+
+        /*
+           Small damping
+        */
+
+        p.vx *= 0.995;
+        p.vy *= 0.995;
+
+
+        /*
+           Velocity changes position
+        */
+
+        p.x +=
+            p.vx * dt;
+
+        p.y +=
+            p.vy * dt;
+
+
+        /*
+           Circular wall collision
+        */
+
+        const dx =
+            p.x - cx;
+
+        const dy =
+            p.y - cy;
+
+        const distance =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+        const maximumDistance =
+            containerRadius -
+            particleRadius;
+
+
+        if (
+            distance >
+            maximumDistance
+        ) {
+
+            const nx =
+                dx / distance;
+
+            const ny =
+                dy / distance;
+
+
+            p.x =
+                cx +
+                nx *
+                maximumDistance;
+
+            p.y =
+                cy +
+                ny *
+                maximumDistance;
+
+
+            const velocityNormal =
+                p.vx * nx +
+                p.vy * ny;
+
+
+            if (
+                velocityNormal > 0
+            ) {
+
+                p.vx -=
+                    1.5 *
+                    velocityNormal *
+                    nx;
+
+                p.vy -=
+                    1.5 *
+                    velocityNormal *
+                    ny;
+            }
+        }
+    }
+
+
+    /*
+       Very simple particle
+       separation.
+    */
+
+    for (
+        let i = 0;
+        i < particles.length;
+        i++
+    ) {
+
+        for (
+            let j = i + 1;
+            j < particles.length;
+            j++
+        ) {
+
+            const a =
+                particles[i];
+
+            const b =
+                particles[j];
+
+
+            let dx =
+                b.x - a.x;
+
+            let dy =
+                b.y - a.y;
+
+
+            let distanceSquared =
+                dx * dx +
+                dy * dy;
+
+
+            const minimumDistance =
+                particleRadius * 2;
+
+
+            if (
+                distanceSquared <
+                minimumDistance *
+                minimumDistance &&
+                distanceSquared >
+                0.0001
+            ) {
+
+                const distance =
+                    Math.sqrt(
+                        distanceSquared
+                    );
+
+                const nx =
+                    dx / distance;
+
+                const ny =
+                    dy / distance;
+
+
+                const overlap =
+                    minimumDistance -
+                    distance;
+
+
+                a.x -=
+                    nx *
+                    overlap *
+                    0.5;
+
+                a.y -=
+                    ny *
+                    overlap *
+                    0.5;
+
+
+                b.x +=
+                    nx *
+                    overlap *
+                    0.5;
+
+                b.y +=
+                    ny *
+                    overlap *
+                    0.5;
+            }
+        }
+    }
+}
+
+
+/* ---------------------------------
+   Drawing
+---------------------------------- */
+
+function draw() {
+
+    const width =
+        window.innerWidth;
+
+    const height =
+        window.innerHeight;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    const cx =
+        width / 2;
+
+    const cy =
+        height / 2;
+
+    const containerRadius =
+        Math.min(
+            width,
+            height
+        ) *
+        0.38;
+
+
+    /*
+       Draw pendant outline
+    */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        cx,
+        cy,
+        containerRadius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.strokeStyle =
+        "white";
+
+    ctx.lineWidth =
+        4;
+
+    ctx.stroke();
+
+
+    /*
+       Draw particles
+    */
+
+    for (
+        const p of particles
+    ) {
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            particleRadius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            "lime";
+
+        ctx.fill();
+    }
+}
+
+
+/* ---------------------------------
+   Main simulation loop
+---------------------------------- */
+
+let previousTime =
+    performance.now();
+
+
+function animate(time) {
+
+    let dt =
+        (time - previousTime) /
+        1000;
+
+    previousTime =
+        time;
+
+
+    /*
+       Prevent huge time steps
+       if browser freezes briefly.
+    */
+
+    dt =
+        Math.min(
+            dt,
+            0.02
+        );
+
+
+    updateParticles(dt);
+
+    draw();
+
+
+    requestAnimationFrame(
+        animate
+    );
+}
+
+
+requestAnimationFrame(
+    animate
+);
+
+</script>
+
+</body>
+
+</html>
