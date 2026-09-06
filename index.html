@@ -331,7 +331,7 @@ function handleOrientation(event) {
 
 
     const gravityStrength =
-        220;
+        450;
 
 
     /*
@@ -551,8 +551,8 @@ const containerRadius =
            Small damping
         */
 
-        p.vx *= 0.992;
-        p.vy *= 0.992;
+        p.vx *= 0.997;
+        p.vy *= 0.997;
 
 
         /*
@@ -1063,7 +1063,7 @@ function animate(time) {
     dt =
         Math.min(
             dt,
-            0.02
+            0.04
         );
 
 
