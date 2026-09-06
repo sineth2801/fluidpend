@@ -41,24 +41,32 @@
         }
 
         button {
-            font-size: 18px;
-            padding: 12px 18px;
-            border: none;
-            border-radius: 10px;
+            font-size: 14px;
+            padding: 9px 14px;
+            border: 1px solid #444;
+            border-radius: 8px;
             margin: 4px;
+            background: #222;
+            color: white;
         }
 
         #status {
-            margin-top: 8px;
-            font-size: 14px;
+            
+           margin-top: 6px;
+           font-size: 12px;
+           color: #888;
         }
 
         #values {
-            position: fixed;
-            bottom: 15px;
-            left: 15px;
-            font-family: monospace;
-            font-size: 14px;
+          position: fixed;
+          bottom: 25px;
+          left: 50%;
+          transform:translateX(-50%);
+          font-family: monospace;
+          font-size: 12px;
+          color: #777;
+          text-align: center;             
+           
         }
     </style>
 </head>
@@ -150,48 +158,123 @@ let gravityY = 180;
 
 const particles = [];
 
-const particleCount = 90;
+const particleCount = 260;
 
-const particleRadius = 5;
+const particleRadius = 3.5;
 
+function getLayout() {
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Outer handheld FluidPend body
+    const bodyWidth =
+        Math.min(width * 0.82, 390);
+
+    const bodyHeight =
+        Math.min(height * 0.68, 590);
+
+    const bodyX =
+        (width - bodyWidth) / 2;
+
+    const bodyY =
+        Math.max(
+            70,
+            (height - bodyHeight) / 2
+        );
+
+    // Circular display
+    const containerRadius =
+        bodyWidth * 0.36;
+
+    const cx =
+        width / 2;
+
+    const cy =
+        bodyY +
+        bodyHeight * 0.34;
+
+    return {
+
+        width,
+        height,
+
+        bodyWidth,
+        bodyHeight,
+
+        bodyX,
+        bodyY,
+
+        cx,
+        cy,
+
+        containerRadius
+    };
+}
 
 function createParticles() {
 
     particles.length = 0;
 
+    const layout =
+        getLayout();
+
     const cx =
-        window.innerWidth / 2;
+        layout.cx;
 
     const cy =
-        window.innerHeight / 2;
+        layout.cy;
 
-    for (
-        let i = 0;
-        i < particleCount;
-        i++
+    const r =
+        layout.containerRadius;
+
+    let attempts = 0;
+
+    while (
+        particles.length <
+        particleCount &&
+        attempts <
+        particleCount * 20
     ) {
 
-        particles.push({
+        attempts++;
 
-            x:
-                cx +
-                (Math.random() - 0.5) *
-                120,
+        const x =
+            cx +
+            (Math.random() - 0.5) *
+            r * 1.45;
 
-            y:
-                cy +
-                80 +
-                Math.random() *
-                120,
+        const y =
+            cy +
+            r * 0.12 +
+            Math.random() *
+            r * 0.63;
 
-            vx: 0,
+        const dx =
+            x - cx;
 
-            vy: 0
+        const dy =
+            y - cy;
 
-        });
+        if (
+            dx * dx +
+            dy * dy <
+            (r - 8) *
+            (r - 8)
+        ) {
+
+            particles.push({
+
+                x: x,
+                y: y,
+
+                vx: 0,
+                vy: 0
+
+            });
+        }
     }
 }
-
 
 createParticles();
 
@@ -429,29 +512,24 @@ window.addEventListener(
 
 function updateParticles(dt) {
 
-    const width =
-        window.innerWidth;
+const layout =
+    getLayout();
 
-    const height =
-        window.innerHeight;
+const width =
+    layout.width;
 
+const height =
+    layout.height;
 
-    /*
-       Circular pendant boundary
-    */
+const cx =
+    layout.cx;
 
-    const cx =
-        width / 2;
+const cy =
+    layout.cy;
 
-    const cy =
-        height / 2;
+const containerRadius =
+    layout.containerRadius;
 
-    const containerRadius =
-        Math.min(
-            width,
-            height
-        ) *
-        0.38;
 
 
     for (
@@ -473,8 +551,8 @@ function updateParticles(dt) {
            Small damping
         */
 
-        p.vx *= 0.995;
-        p.vy *= 0.995;
+        p.vx *= 0.992;
+        p.vy *= 0.992;
 
 
         /*
@@ -652,12 +730,28 @@ function updateParticles(dt) {
 
 function draw() {
 
+    const layout =
+        getLayout();
+
     const width =
-        window.innerWidth;
+        layout.width;
 
     const height =
-        window.innerHeight;
+        layout.height;
 
+    const cx =
+        layout.cx;
+
+    const cy =
+        layout.cy;
+
+    const r =
+        layout.containerRadius;
+
+
+    /*
+       Clear background
+    */
 
     ctx.clearRect(
         0,
@@ -666,23 +760,47 @@ function draw() {
         height
     );
 
+    ctx.fillStyle =
+        "#101010";
 
-    const cx =
-        width / 2;
-
-    const cy =
-        height / 2;
-
-    const containerRadius =
-        Math.min(
-            width,
-            height
-        ) *
-        0.38;
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
 
 
     /*
-       Draw pendant outline
+       Draw handheld enclosure
+    */
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        layout.bodyX,
+        layout.bodyY,
+        layout.bodyWidth,
+        layout.bodyHeight,
+        layout.bodyWidth * 0.17
+    );
+
+    ctx.fillStyle =
+        "#252525";
+
+    ctx.fill();
+
+    ctx.strokeStyle =
+        "#333333";
+
+    ctx.lineWidth =
+        3;
+
+    ctx.stroke();
+
+
+    /*
+       Circular black display
     */
 
     ctx.beginPath();
@@ -690,42 +808,231 @@ function draw() {
     ctx.arc(
         cx,
         cy,
-        containerRadius,
+        r,
         0,
         Math.PI * 2
     );
 
+    ctx.fillStyle =
+        "#020707";
+
+    ctx.fill();
+
     ctx.strokeStyle =
-        "white";
+        "#111818";
 
     ctx.lineWidth =
-        4;
+        7;
 
     ctx.stroke();
 
 
     /*
-       Draw particles
+       Create virtual LED/pixel display
+    */
+
+    const pixelSize =
+        Math.max(
+            5,
+            Math.floor(
+                (r * 2) / 46
+            )
+        );
+
+    const left =
+        cx - r;
+
+    const top =
+        cy - r;
+
+    const columns =
+        Math.ceil(
+            (r * 2) /
+            pixelSize
+        );
+
+    const rows =
+        columns;
+
+
+    /*
+       Fluid density map
+    */
+
+    const density =
+        new Float32Array(
+            columns * rows
+        );
+
+
+    function addDensity(
+        column,
+        row,
+        amount
+    ) {
+
+        if (
+            column < 0 ||
+            row < 0 ||
+            column >= columns ||
+            row >= rows
+        ) {
+            return;
+        }
+
+        density[
+            row * columns +
+            column
+        ] += amount;
+    }
+
+
+    /*
+       Convert particle positions
+       into display pixels
     */
 
     for (
         const p of particles
     ) {
 
-        ctx.beginPath();
+        const column =
+            Math.floor(
+                (p.x - left) /
+                pixelSize
+            );
 
-        ctx.arc(
-            p.x,
-            p.y,
-            particleRadius,
-            0,
-            Math.PI * 2
+        const row =
+            Math.floor(
+                (p.y - top) /
+                pixelSize
+            );
+
+
+        addDensity(
+            column,
+            row,
+            1
         );
 
-        ctx.fillStyle =
-            "lime";
+        addDensity(
+            column + 1,
+            row,
+            0.35
+        );
 
-        ctx.fill();
+        addDensity(
+            column - 1,
+            row,
+            0.35
+        );
+
+        addDensity(
+            column,
+            row + 1,
+            0.35
+        );
+
+        addDensity(
+            column,
+            row - 1,
+            0.35
+        );
+    }
+
+
+    /*
+       Draw virtual LEDs
+    */
+
+    const gap =
+        0.7;
+
+    for (
+        let row = 0;
+        row < rows;
+        row++
+    ) {
+
+        for (
+            let column = 0;
+            column < columns;
+            column++
+        ) {
+
+            const value =
+                density[
+                    row * columns +
+                    column
+                ];
+
+
+            if (
+                value < 0.3
+            ) {
+                continue;
+            }
+
+
+            const x =
+                left +
+                column *
+                pixelSize;
+
+            const y =
+                top +
+                row *
+                pixelSize;
+
+
+            /*
+               Make sure LED is
+               inside circular screen
+            */
+
+            const px =
+                x +
+                pixelSize / 2;
+
+            const py =
+                y +
+                pixelSize / 2;
+
+            const dx =
+                px - cx;
+
+            const dy =
+                py - cy;
+
+
+            if (
+                dx * dx +
+                dy * dy >
+                (r - 5) *
+                (r - 5)
+            ) {
+                continue;
+            }
+
+
+            /*
+               Cyan FluidPend pixels
+            */
+
+            ctx.fillStyle =
+                "#32DDE3";
+
+            ctx.fillRect(
+                x + gap,
+                y + gap,
+
+                pixelSize -
+                gap * 2,
+
+                pixelSize -
+                gap * 2
+            );
+        }
     }
 }
 
